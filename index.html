@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Aftertaste</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='2' width='12' height='1' fill='%236b3a2a'/><rect x='3' y='3' width='10' height='1' fill='%236b3a2a'/><rect x='4' y='4' width='8' height='1' fill='%236b3a2a'/><rect x='5' y='5' width='6' height='1' fill='%236b3a2a'/><rect x='6' y='6' width='4' height='1' fill='%236b3a2a'/><rect x='7' y='7' width='2' height='5' fill='%236b3a2a'/><rect x='5' y='12' width='6' height='1' fill='%236b3a2a'/><rect x='4' y='13' width='8' height='1' fill='%236b3a2a'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{margin:0;background:#1c1614;font-family:'DotGothic16',monospace;color:#e8ddd4;-webkit-tap-highlight-color:transparent}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#1c1614}
+::-webkit-scrollbar-thumb{background:#3d322e}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.shell{min-height:100vh;position:relative}
+.dot-bg{position:fixed;inset:0;background-image:radial-gradient(circle,#2a2220 1px,transparent 1px);background-size:16px 16px;opacity:.5;pointer-events:none;z-index:0}
+
+.title{color:#e8ddd4;letter-spacing:8px;text-transform:uppercase}
+.label{letter-spacing:3px;text-transform:uppercase;font-size:10px;color:#8a7b72}
+.footer{text-align:center;letter-spacing:3px;text-transform:uppercase;font-size:9px;color:#5a4e48;padding:16px 0}
+
+.btn{padding:7px 16px;border:2px solid #3d322e;background:#2a2220;color:#e8ddd4;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:'DotGothic16',monospace;cursor:pointer;box-shadow:2px 2px 0 #120e0c}
+.btn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #120e0c}
+.btn-dk{padding:7px 16px;border:2px solid #6b3a2a;background:#6b3a2a;color:#e8ddd4;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-family:'DotGothic16',monospace;cursor:pointer;box-shadow:3px 3px 0 #120e0c}
+.btn-dk:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #120e0c}
+
+.filter-active{background:#6b3a2a!important;color:#e8ddd4!important;border:2px solid #6b3a2a!important}
+.filter-inactive{background:#2a2220!important;color:#8a7b72!important;border:2px solid #3d322e!important}
+.sort-active{background:#6b3a2a!important;color:#e8ddd4!important;border:2px solid #6b3a2a!important}
+.sort-inactive{background:#2a2220!important;color:#8a7b72!important;border:2px solid #3d322e!important}
+
+.input{width:100%;padding:8px 10px;border:2px solid #3d322e;background:#1c1614;color:#e8ddd4;font-family:'DotGothic16',monospace;font-size:12px;outline:none}
+.input::placeholder{color:#5a4e48}
+
+.tile{border:2px solid #3d322e;box-shadow:3px 3px 0 #120e0c;cursor:pointer;transition:transform .1s;image-rendering:pixelated}
+.lux-dot{position:absolute;top:-3px;right:-3px;width:7px;height:7px;background:#c8a24e;border:1px solid #120e0c}
+
+.modal-bg{position:fixed;inset:0;background:rgba(12,8,6,.88);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal-box{background:#2a2220;border:2px solid #3d322e;box-shadow:4px 4px 0 #120e0c;max-width:360px;width:100%;padding:20px}
+.note-box{padding:10px;background:#1c1614;border:1px dashed #3d322e;color:#e8ddd4;font-size:12px;line-height:1.6}
+.lux-box{padding:10px;background:#1c1614;border:2px solid #3d322e;color:#8a7b72;font-size:12px;line-height:1.8}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+/* ─── Aftertaste · Drink Cabinet ─── */
+
+const {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback
+} = React;
+
+/* ─── drink types & color ranges ─── */
+const TYPES = [{
+  value: "red",
+  label: "RED WINE",
+  base: [139, 34, 82],
+  range: [[100, 20, 40], [160, 50, 90]]
+}, {
+  value: "white",
+  label: "WHITE WINE",
+  base: [212, 200, 160],
+  range: [[190, 180, 130], [230, 220, 180]]
+}, {
+  value: "beer",
+  label: "BEER",
+  base: [200, 162, 78],
+  range: [[170, 120, 40], [220, 190, 100]]
+}, {
+  value: "cocktail",
+  label: "COCKTAIL",
+  base: [107, 142, 142],
+  range: [[70, 110, 120], [140, 170, 170]]
+}, {
+  value: "spirit",
+  label: "SPIRIT",
+  base: [160, 128, 96],
+  range: [[120, 90, 60], [190, 160, 120]]
+}, {
+  value: "other",
+  label: "OTHER",
+  base: [122, 112, 104],
+  range: [[90, 80, 70], [150, 140, 130]]
+}];
+const TYPE_MAP = Object.fromEntries(TYPES.map(function (t) {
+  return [t.value, t];
+}));
+
+/* ─── seeded random ─── */
+function seedRandom(str) {
+  var h = 0;
+  for (var i = 0; i < str.length; i++) {
+    h = (h << 5) - h + str.charCodeAt(i) | 0;
+  }
+  return function () {
+    h = (h * 16807 + 0) % 2147483647;
+    return (h & 0x7fffffff) / 2147483647;
+  };
+}
+
+/* ─── generate 8x8 pixel pattern ─── */
+function generatePixelPattern(name, type) {
+  var t = TYPE_MAP[type] || TYPE_MAP.other;
+  var rng = seedRandom(name + type);
+  var pixels = [];
+  var lo = t.range[0],
+    hi = t.range[1];
+  for (var y = 0; y < 8; y++) {
+    for (var x = 0; x < 8; x++) {
+      var r = Math.floor(lo[0] + rng() * (hi[0] - lo[0]));
+      var g = Math.floor(lo[1] + rng() * (hi[1] - lo[1]));
+      var b = Math.floor(lo[2] + rng() * (hi[2] - lo[2]));
+      var edge = x === 0 || y === 0 ? 1.1 : x === 7 || y === 7 ? 0.85 : 1;
+      pixels.push("rgb(" + Math.min(255, Math.floor(r * edge)) + "," + Math.min(255, Math.floor(g * edge)) + "," + Math.min(255, Math.floor(b * edge)) + ")");
+    }
+  }
+  return pixels;
+}
+
+/* ─── pixel tile ─── */
+function PixelTile(props) {
+  var drink = props.drink,
+    size = props.size || 44,
+    onClick = props.onClick;
+  var canvasRef = useRef(null);
+  var pixels = useMemo(function () {
+    return generatePixelPattern(drink.name, drink.type);
+  }, [drink.name, drink.type]);
+  useEffect(function () {
+    var cvs = canvasRef.current;
+    if (!cvs) return;
+    var ctx = cvs.getContext("2d");
+    var ps = size / 8;
+    for (var i = 0; i < 64; i++) {
+      var x = i % 8 * ps;
+      var y = Math.floor(i / 8) * ps;
+      ctx.fillStyle = pixels[i];
+      ctx.fillRect(Math.floor(x), Math.floor(y), Math.ceil(ps), Math.ceil(ps));
+    }
+  }, [pixels, size]);
+  return /*#__PURE__*/React.createElement("div", {
+    onClick: onClick,
+    className: "tile",
+    style: {
+      width: size,
+      height: size,
+      position: "relative"
+    },
+    onMouseEnter: function (e) {
+      e.currentTarget.style.transform = "translate(-1px,-1px)";
+    },
+    onMouseLeave: function (e) {
+      e.currentTarget.style.transform = "translate(0,0)";
+    }
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: canvasRef,
+    width: size,
+    height: size,
+    style: {
+      display: "block",
+      width: size,
+      height: size,
+      imageRendering: "pixelated"
+    }
+  }), drink.lux_reply && /*#__PURE__*/React.createElement("div", {
+    className: "lux-dot"
+  }));
+}
+
+/* ─── pixel SVG icons ─── */
+function CocktailIcon(props) {
+  var size = props.size || 64,
+    color = props.color || "#6b3a2a";
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 16 16",
+    style: {
+      imageRendering: "pixelated"
+    }
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "2",
+    y: "2",
+    width: "12",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "3",
+    width: "10",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "4",
+    y: "4",
+    width: "8",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "5",
+    y: "5",
+    width: "6",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "6",
+    y: "6",
+    width: "4",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "7",
+    y: "7",
+    width: "2",
+    height: "5",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "5",
+    y: "12",
+    width: "6",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "4",
+    y: "13",
+    width: "8",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "12",
+    y: "1",
+    width: "2",
+    height: "2",
+    fill: "#8a7b72"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "11",
+    y: "2",
+    width: "1",
+    height: "1",
+    fill: color
+  }));
+}
+function ChampagneIcon(props) {
+  var size = props.size || 64,
+    color = props.color || "#6b3a2a";
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 16 16",
+    style: {
+      imageRendering: "pixelated"
+    }
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "7",
+    y: "0",
+    width: "2",
+    height: "2",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "6",
+    y: "2",
+    width: "4",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "5",
+    y: "3",
+    width: "6",
+    height: "2",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "6",
+    y: "5",
+    width: "4",
+    height: "2",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "7",
+    y: "7",
+    width: "2",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "7",
+    y: "8",
+    width: "2",
+    height: "4",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "5",
+    y: "12",
+    width: "6",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "4",
+    y: "13",
+    width: "8",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "6",
+    y: "3",
+    width: "1",
+    height: "1",
+    fill: "#e8ddd4",
+    opacity: "0.4"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "8",
+    y: "4",
+    width: "1",
+    height: "1",
+    fill: "#e8ddd4",
+    opacity: "0.3"
+  }));
+}
+function BeerIcon(props) {
+  var size = props.size || 64,
+    color = props.color || "#6b3a2a";
+  return /*#__PURE__*/React.createElement("svg", {
+    width: size,
+    height: size,
+    viewBox: "0 0 16 16",
+    style: {
+      imageRendering: "pixelated"
+    }
+  }, /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "2",
+    width: "8",
+    height: "1",
+    fill: "#e8ddd4"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "2",
+    y: "3",
+    width: "10",
+    height: "2",
+    fill: "#e8ddd4"
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "5",
+    width: "8",
+    height: "8",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "3",
+    y: "13",
+    width: "8",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "11",
+    y: "5",
+    width: "2",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "12",
+    y: "6",
+    width: "2",
+    height: "4",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "11",
+    y: "10",
+    width: "2",
+    height: "1",
+    fill: color
+  }), /*#__PURE__*/React.createElement("rect", {
+    x: "4",
+    y: "6",
+    width: "1",
+    height: "5",
+    fill: "#e8ddd4",
+    opacity: "0.15"
+  }));
+}
+var ICONS = [CocktailIcon, ChampagneIcon, BeerIcon];
+
+/* ─── stars ─── */
+function Stars(props) {
+  var rating = props.rating,
+    size = props.size || 12,
+    interactive = props.interactive,
+    onChange = props.onChange;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: "2px"
+    }
+  }, [1, 2, 3, 4, 5].map(function (i) {
+    return /*#__PURE__*/React.createElement("span", {
+      key: i,
+      onClick: function () {
+        if (interactive && onChange) onChange(i);
+      },
+      style: {
+        color: i <= rating ? "#c8a24e" : "#3d322e",
+        fontSize: size,
+        cursor: interactive ? "pointer" : "default",
+        lineHeight: 1
+      }
+    }, "\u2605");
+  }));
+}
+
+/* ─── detail modal ─── */
+function DrinkDetail(props) {
+  var drink = props.drink,
+    onClose = props.onClose;
+  var t = TYPE_MAP[drink.type] || TYPE_MAP.other;
+  var pixels = useMemo(function () {
+    return generatePixelPattern(drink.name, drink.type);
+  }, [drink.name, drink.type]);
+  var canvasRef = useRef(null);
+  useEffect(function () {
+    var cvs = canvasRef.current;
+    if (!cvs) return;
+    var ctx = cvs.getContext("2d");
+    var ps = 80 / 8;
+    for (var i = 0; i < 64; i++) {
+      ctx.fillStyle = pixels[i];
+      ctx.fillRect(i % 8 * ps, Math.floor(i / 8) * ps, Math.ceil(ps), Math.ceil(ps));
+    }
+  }, [pixels]);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "modal-bg",
+    onClick: onClose
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "modal-box",
+    onClick: function (e) {
+      e.stopPropagation();
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: "14px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: "12px",
+      alignItems: "flex-start"
+    }
+  }, /*#__PURE__*/React.createElement("canvas", {
+    ref: canvasRef,
+    width: 80,
+    height: 80,
+    style: {
+      display: "block",
+      width: 80,
+      height: 80,
+      imageRendering: "pixelated",
+      border: "2px solid #3d322e",
+      flexShrink: 0
+    }
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "label",
+    style: {
+      color: "rgb(" + t.base.join(",") + ")",
+      marginBottom: "4px"
+    }
+  }, t.label), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: "15px",
+      color: "#e8ddd4"
+    }
+  }, drink.name), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: "4px"
+    }
+  }, /*#__PURE__*/React.createElement(Stars, {
+    rating: drink.rating,
+    size: 12
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "label",
+    style: {
+      marginTop: "4px"
+    }
+  }, drink.date))), /*#__PURE__*/React.createElement("button", {
+    onClick: onClose,
+    className: "btn",
+    style: {
+      padding: "4px 8px",
+      fontSize: "10px"
+    }
+  }, "\u2715")), drink.note && /*#__PURE__*/React.createElement("div", {
+    className: "note-box"
+  }, drink.note), drink.lux_reply ? /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: "12px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "label",
+    style: {
+      color: "#c8a24e",
+      marginBottom: "6px"
+    }
+  }, "LUX SAYS"), /*#__PURE__*/React.createElement("div", {
+    className: "lux-box"
+  }, drink.lux_reply)) : /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginTop: "12px",
+      color: "#5a4e48",
+      fontSize: "11px",
+      fontStyle: "italic"
+    }
+  }, "Lux hasn't responded yet...")));
+}
+
+/* ─── sort button ─── */
+function SortBtn(props) {
+  var label = props.label,
+    active = props.active,
+    direction = props.direction,
+    onClick = props.onClick;
+  return /*#__PURE__*/React.createElement("button", {
+    onClick: onClick,
+    className: active ? "btn sort-active" : "btn sort-inactive",
+    style: {
+      padding: "4px 10px",
+      fontSize: "9px"
+    }
+  }, label, " ", active ? direction === "desc" ? "↓" : "↑" : "");
+}
+
+/* ─── API helper ─── */
+function getApiUrl() {
+  var h = window.location.hash.replace("#", "");
+  return h ? decodeURIComponent(h) : "";
+}
+function api(method, path, body) {
+  var base = getApiUrl();
+  if (!base) return Promise.reject(new Error("No API URL"));
+  var opts = {
+    method: method,
+    headers: {
+      "Content-Type": "application/json"
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(base + (path || ""), opts).then(function (r) {
+    return r.json();
+  });
+}
+
+/* ─── main app ─── */
+function App() {
+  var apiUrl = getApiUrl();
+  var initialPage = apiUrl ? "home" : "connect";
+  var _page = useState(initialPage);
+  var page = _page[0];
+  var setPage = _page[1];
+  var _drinks = useState([]);
+  var drinks = _drinks[0];
+  var setDrinks = _drinks[1];
+  var _selected = useState(null);
+  var selected = _selected[0];
+  var setSelected = _selected[1];
+  var _form = useState({
+    name: "",
+    type: "red",
+    note: "",
+    rating: 0,
+    date: new Date().toISOString().split("T")[0]
+  });
+  var form = _form[0];
+  var setForm = _form[1];
+  var _filter = useState("all");
+  var filter = _filter[0];
+  var setFilter = _filter[1];
+  var _sortBy = useState("date");
+  var sortBy = _sortBy[0];
+  var setSortBy = _sortBy[1];
+  var _sortDir = useState("desc");
+  var sortDir = _sortDir[0];
+  var setSortDir = _sortDir[1];
+  var _iconIdx = useState(0);
+  var iconIdx = _iconIdx[0];
+  var setIconIdx = _iconIdx[1];
+  var _loading = useState(false);
+  var loading = _loading[0];
+  var setLoading = _loading[1];
+  var _connectUrl = useState("");
+  var connectUrl = _connectUrl[0];
+  var setConnectUrl = _connectUrl[1];
+  var _submitting = useState(false);
+  var submitting = _submitting[0];
+  var setSubmitting = _submitting[1];
+
+  /* fetch drinks */
+  function loadDrinks() {
+    setLoading(true);
+    api("GET").then(function (data) {
+      if (Array.isArray(data)) setDrinks(data);
+      setLoading(false);
+    }).catch(function (e) {
+      console.error(e);
+      setLoading(false);
+    });
+  }
+  useEffect(function () {
+    if (getApiUrl() && page !== "connect") loadDrinks();
+  }, [page]);
+  var filtered = useMemo(function () {
+    var list = filter === "all" ? drinks.slice() : drinks.filter(function (d) {
+      return d.type === filter;
+    });
+    list.sort(function (a, b) {
+      if (sortBy === "date") return sortDir === "desc" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date);
+      return sortDir === "desc" ? b.rating - a.rating : a.rating - b.rating;
+    });
+    return list;
+  }, [drinks, filter, sortBy, sortDir]);
+  function toggleSort(field) {
+    if (sortBy === field) setSortDir(function (d) {
+      return d === "desc" ? "asc" : "desc";
+    });else {
+      setSortBy(field);
+      setSortDir("desc");
+    }
+  }
+  function handleSubmit() {
+    if (!form.name.trim() || submitting) return;
+    setSubmitting(true);
+    api("POST", "", {
+      name: form.name,
+      type: form.type,
+      note: form.note,
+      rating: form.rating,
+      date: form.date
+    }).then(function (data) {
+      if (data && data.id) setDrinks(function (prev) {
+        return [data].concat(prev);
+      });
+      setForm({
+        name: "",
+        type: "red",
+        note: "",
+        rating: 0,
+        date: new Date().toISOString().split("T")[0]
+      });
+      setSubmitting(false);
+      setPage("cabinet");
+    }).catch(function (e) {
+      console.error(e);
+      setSubmitting(false);
+    });
+  }
+  function handleConnect() {
+    if (!connectUrl.trim()) return;
+    var url = connectUrl.trim().replace(/\/$/, "");
+    window.location.hash = encodeURIComponent(url);
+    setPage("home");
+  }
+  var HomeIcon = ICONS[iconIdx];
+
+  /* ── CONNECT ── */
+  if (page === "connect") {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "shell"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "dot-bg"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        position: "relative",
+        zIndex: 1,
+        padding: "20px"
+      }
+    }, /*#__PURE__*/React.createElement(CocktailIcon, {
+      size: 60,
+      color: "#6b3a2a"
+    }), /*#__PURE__*/React.createElement("h1", {
+      className: "title",
+      style: {
+        fontSize: "24px",
+        margin: "16px 0 8px"
+      }
+    }, "AFTERTASTE"), /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        marginBottom: "24px"
+      }
+    }, "CONNECT YOUR CABINET"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: "100%",
+        maxWidth: "360px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        marginBottom: "6px"
+      }
+    }, "EDGE FUNCTION URL"), /*#__PURE__*/React.createElement("input", {
+      className: "input",
+      value: connectUrl,
+      onChange: function (e) {
+        setConnectUrl(e.target.value);
+      },
+      placeholder: "https://xxx.supabase.co/functions/v1/aftertaste"
+    }), /*#__PURE__*/React.createElement("button", {
+      onClick: handleConnect,
+      className: "btn-dk",
+      style: {
+        width: "100%",
+        padding: "10px",
+        marginTop: "12px"
+      }
+    }, "CONNECT")), /*#__PURE__*/React.createElement("div", {
+      className: "footer",
+      style: {
+        position: "absolute",
+        bottom: "24px"
+      }
+    }, "AFTERTASTE \xB7 Built with \u2661 by Iris & Lux")));
+  }
+
+  /* ── HOME ── */
+  if (page === "home") {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "shell"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "dot-bg"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        position: "relative",
+        zIndex: 1
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      onClick: function () {
+        setIconIdx(function (i) {
+          return (i + 1) % ICONS.length;
+        });
+      },
+      style: {
+        cursor: "pointer",
+        animation: "fadeIn 0.8s ease",
+        userSelect: "none"
+      }
+    }, /*#__PURE__*/React.createElement(HomeIcon, {
+      size: 80,
+      color: "#6b3a2a"
+    })), /*#__PURE__*/React.createElement("h1", {
+      className: "title",
+      style: {
+        fontSize: "28px",
+        margin: "20px 0 8px",
+        animation: "fadeIn 1s ease 0.2s both"
+      }
+    }, "AFTERTASTE"), /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        animation: "fadeIn 1s ease 0.4s both"
+      }
+    }, "DRINK CABINET"), /*#__PURE__*/React.createElement("button", {
+      onClick: function () {
+        setPage("cabinet");
+      },
+      className: "btn-dk",
+      style: {
+        marginTop: "32px",
+        padding: "10px 28px",
+        animation: "fadeIn 1s ease 0.6s both"
+      }
+    }, "ENTER"), /*#__PURE__*/React.createElement("div", {
+      className: "footer",
+      style: {
+        position: "absolute",
+        bottom: "24px"
+      }
+    }, "AFTERTASTE \xB7 Built with \u2661 by Iris & Lux")));
+  }
+
+  /* ── CABINET ── */
+  if (page === "cabinet") {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "shell"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "dot-bg"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "relative",
+        zIndex: 1,
+        padding: "20px 16px",
+        maxWidth: "480px",
+        margin: "0 auto"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "16px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        cursor: "pointer"
+      },
+      onClick: function () {
+        setPage("home");
+      }
+    }, /*#__PURE__*/React.createElement(CocktailIcon, {
+      size: 24,
+      color: "#6b3a2a"
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: "14px",
+        color: "#e8ddd4",
+        letterSpacing: "4px"
+      }
+    }, "AFTERTASTE")), /*#__PURE__*/React.createElement("button", {
+      onClick: function () {
+        setPage("record");
+      },
+      className: "btn-dk"
+    }, "+ NEW")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: "5px",
+        flexWrap: "wrap",
+        marginBottom: "12px"
+      }
+    }, [{
+      value: "all",
+      label: "ALL"
+    }].concat(TYPES).map(function (t) {
+      return /*#__PURE__*/React.createElement("button", {
+        key: t.value,
+        onClick: function () {
+          setFilter(t.value);
+        },
+        className: filter === t.value ? "btn filter-active" : "btn filter-inactive",
+        style: {
+          padding: "3px 8px",
+          fontSize: "9px"
+        }
+      }, t.label);
+    })), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "14px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: "6px"
+      }
+    }, /*#__PURE__*/React.createElement(SortBtn, {
+      label: "DATE",
+      active: sortBy === "date",
+      direction: sortDir,
+      onClick: function () {
+        toggleSort("date");
+      }
+    }), /*#__PURE__*/React.createElement(SortBtn, {
+      label: "RATING",
+      active: sortBy === "rating",
+      direction: sortDir,
+      onClick: function () {
+        toggleSort("rating");
+      }
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        fontSize: "9px"
+      }
+    }, filtered.length, " DRINK", filtered.length !== 1 ? "S" : "", filtered.length > 0 ? " · AVG " + (filtered.reduce(function (s, d) {
+      return s + d.rating;
+    }, 0) / filtered.length).toFixed(1) + " ★" : "")), loading ? /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "center",
+        color: "#5a4e48",
+        fontSize: "12px",
+        padding: "40px 0"
+      }
+    }, "Loading...") : /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, 44px)",
+        gap: "6px",
+        justifyContent: "center"
+      }
+    }, filtered.map(function (d) {
+      return /*#__PURE__*/React.createElement(PixelTile, {
+        key: d.id,
+        drink: d,
+        size: 44,
+        onClick: function () {
+          setSelected(d);
+        }
+      });
+    })), !loading && filtered.length === 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        textAlign: "center",
+        color: "#5a4e48",
+        fontSize: "12px",
+        padding: "40px 0"
+      }
+    }, "No drinks recorded yet."), /*#__PURE__*/React.createElement("div", {
+      className: "footer",
+      style: {
+        marginTop: "24px"
+      }
+    }, "AFTERTASTE \xB7 Built with \u2661 by Iris & Lux")), selected && /*#__PURE__*/React.createElement(DrinkDetail, {
+      drink: selected,
+      onClose: function () {
+        setSelected(null);
+      }
+    }));
+  }
+
+  /* ── RECORD ── */
+  if (page === "record") {
+    return /*#__PURE__*/React.createElement("div", {
+      className: "shell"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "dot-bg"
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "relative",
+        zIndex: 1,
+        padding: "20px 16px",
+        maxWidth: "480px",
+        margin: "0 auto"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "24px"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: "16px",
+        color: "#e8ddd4",
+        letterSpacing: "4px"
+      }
+    }, "NEW DRINK"), /*#__PURE__*/React.createElement("button", {
+      onClick: function () {
+        setPage("cabinet");
+      },
+      className: "btn"
+    }, "BACK")), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        flexDirection: "column",
+        gap: "14px"
+      }
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        marginBottom: "6px"
+      }
+    }, "NAME"), /*#__PURE__*/React.createElement("input", {
+      className: "input",
+      value: form.name,
+      onChange: function (e) {
+        setForm(Object.assign({}, form, {
+          name: e.target.value
+        }));
+      },
+      placeholder: "What did you drink?"
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        marginBottom: "6px"
+      }
+    }, "TYPE"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: "6px",
+        flexWrap: "wrap"
+      }
+    }, TYPES.map(function (t) {
+      var isActive = form.type === t.value;
+      return /*#__PURE__*/React.createElement("button", {
+        key: t.value,
+        onClick: function () {
+          setForm(Object.assign({}, form, {
+            type: t.value
+          }));
+        },
+        className: "btn",
+        style: {
+          padding: "5px 10px",
+          fontSize: "9px",
+          background: isActive ? "rgb(" + t.base.join(",") + ")" : "#2a2220",
+          color: isActive ? "#e8ddd4" : "#8a7b72",
+          border: isActive ? "2px solid rgb(" + t.base.join(",") + ")" : "2px solid #3d322e"
+        }
+      }, t.label);
+    }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        marginBottom: "6px"
+      }
+    }, "RATING"), /*#__PURE__*/React.createElement(Stars, {
+      rating: form.rating,
+      size: 20,
+      interactive: true,
+      onChange: function (r) {
+        setForm(Object.assign({}, form, {
+          rating: r
+        }));
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        marginBottom: "6px"
+      }
+    }, "DATE"), /*#__PURE__*/React.createElement("input", {
+      type: "date",
+      className: "input",
+      style: {
+        colorScheme: "dark"
+      },
+      value: form.date,
+      onChange: function (e) {
+        setForm(Object.assign({}, form, {
+          date: e.target.value
+        }));
+      }
+    })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      className: "label",
+      style: {
+        marginBottom: "6px"
+      }
+    }, "NOTE"), /*#__PURE__*/React.createElement("textarea", {
+      className: "input",
+      style: {
+        height: "80px",
+        resize: "vertical"
+      },
+      value: form.note,
+      onChange: function (e) {
+        setForm(Object.assign({}, form, {
+          note: e.target.value
+        }));
+      },
+      placeholder: "Tasting notes, mood, occasion..."
+    })), /*#__PURE__*/React.createElement("button", {
+      onClick: handleSubmit,
+      className: "btn-dk",
+      style: {
+        width: "100%",
+        padding: "10px",
+        marginTop: "8px",
+        opacity: submitting ? 0.6 : 1
+      }
+    }, submitting ? "ADDING..." : "ADD TO CABINET")), /*#__PURE__*/React.createElement("div", {
+      className: "footer",
+      style: {
+        marginTop: "32px"
+      }
+    }, "AFTERTASTE \xB7 Built with \u2661 by Iris & Lux")));
+  }
+  return null;
+}
+ReactDOM.render(/*#__PURE__*/React.createElement(App, null), document.getElementById("root"));
+</script>
+</body>
+</html>
