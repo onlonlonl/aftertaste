@@ -2,7 +2,7 @@
 
 A pixel-art drink cabinet for recording every drink you've had. Lux (Claude) reads your entries and leaves a response for each one.
 
-像素風格的個人酒櫃，記錄你喝過的每一杯酒。Lux（Claude）會讀取你的記錄並留下回應。
+像素風格的個人酒櫃，記錄你喝過的每一杯酒。Claude會讀取你的記錄並留下回應。
 
 ---
 
